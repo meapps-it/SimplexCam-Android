@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   build-debug-apk:
-    name: APK Android di prova
+    name: Preparazione SDK e APK Android di prova
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -26,28 +26,42 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Prepara Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Installa Android SDK 35
-        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+        shell: bash
+        run: |
+          command -v sdkmanager
+          sdkmanager --install 'platforms;android-35' 'build-tools;35.0.0'
+
+      - name: Verifica presenza sorgenti
+        id: sources
+        shell: bash
+        run: |
+          if [[ -f SimplexCam-0.2-beta-Sorgenti.zip ]]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Configurazione Android pronta. Per compilare APK caricare SimplexCam-0.2-beta-Sorgenti.zip dopo aver reso privato il repository."
+          fi
 
       - name: Cache Gradle
+        if: steps.sources.outputs.available == 'true'
         uses: gradle/actions/setup-gradle@v4
 
       - name: Estrai sorgenti
+        if: steps.sources.outputs.available == 'true'
         shell: bash
         run: |
-          test -f SimplexCam-0.2-beta-Sorgenti.zip
           mkdir -p buildsrc
           unzip -q SimplexCam-0.2-beta-Sorgenti.zip -d buildsrc
           chmod +x buildsrc/Casacam-Verifica-0.1-Progetto/Casacam/gradlew
 
       - name: Compila APK debug
+        if: steps.sources.outputs.available == 'true'
         working-directory: buildsrc/Casacam-Verifica-0.1-Progetto/Casacam
         run: ./gradlew --no-daemon :app:assembleDebug
 
       - name: Pubblica APK da scaricare
+        if: steps.sources.outputs.available == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: SimplexCam-0.2-beta-APK
