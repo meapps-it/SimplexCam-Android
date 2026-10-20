@@ -29,8 +29,13 @@ jobs:
       - name: Installa Android SDK 35
         shell: bash
         run: |
-          command -v sdkmanager
-          sdkmanager --install 'platforms;android-35' 'build-tools;35.0.0'
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)"
+          if [[ -z "$SDKMANAGER" ]]; then
+            echo "::error::sdkmanager non trovato in $SDK_ROOT"
+            exit 1
+          fi
+          "$SDKMANAGER" --sdk_root="$SDK_ROOT" --install 'platforms;android-35' 'build-tools;35.0.0'
 
       - name: Verifica presenza sorgenti
         id: sources
